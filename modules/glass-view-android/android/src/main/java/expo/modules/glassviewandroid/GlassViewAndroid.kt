@@ -11,6 +11,7 @@ import android.graphics.RuntimeShader
 import android.graphics.Shader
 import android.os.Build
 import android.view.Choreographer
+import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.RequiresApi
 import expo.modules.kotlin.AppContext
@@ -178,6 +179,17 @@ class GlassViewAndroid(context: Context, appContext: AppContext) :
     }
   }
 
+  // The overlay draws outside the view hierarchy, so ancestor opacity has to be applied by hand.
+  internal fun effectiveAlpha(): Float {
+    var result = 1f
+    var current: View? = this
+    while (current != null) {
+      result *= current.alpha
+      current = current.parent as? View
+    }
+    return result
+  }
+
   private fun radiusPx(w: Float, h: Float): Float =
     min(cornerRadiusDp?.let { it * density } ?: (min(w, h) / 2f), min(w, h) / 2f)
 
@@ -227,7 +239,7 @@ class GlassViewAndroid(context: Context, appContext: AppContext) :
     min(lensRadiusDp?.let { it * density } ?: (min(r.width(), r.height()) / 2f), min(r.width(), r.height()) / 2f)
 
   @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-  internal fun render(canvas: Canvas, back: RenderNode, x: Float, y: Float) {
+  internal fun render(canvas: Canvas, back: RenderNode, x: Float, y: Float, opacity: Float) {
     val w = width.toFloat()
     val h = height.toFloat()
     val s = (shaders as? Shaders) ?: Shaders().also { shaders = it }
@@ -254,6 +266,7 @@ class GlassViewAndroid(context: Context, appContext: AppContext) :
     val blur = max(blurDp * density, .01f)
     val surf = surface as RenderNode
     surf.setPosition(-m, -m, width + m, height + m)
+    surf.alpha = opacity
     surf.setRenderEffect(
       RenderEffect.createChainEffect(
         RenderEffect.createRuntimeShaderEffect(shader, "content"),
@@ -268,6 +281,7 @@ class GlassViewAndroid(context: Context, appContext: AppContext) :
 
     val kids = children as RenderNode
     kids.setPosition(0, 0, width, height)
+    kids.alpha = opacity
     val kidsRec = kids.beginRecording(width, height)
     drawRest(kidsRec)
     super.dispatchDraw(kidsRec)
@@ -293,6 +307,7 @@ class GlassViewAndroid(context: Context, appContext: AppContext) :
 
     val ln = lens as RenderNode
     ln.setPosition(-m, -m, width + m, height + m)
+    ln.alpha = opacity
     ln.setRenderEffect(RenderEffect.createRuntimeShaderEffect(ls, "content"))
     val lensRec = ln.beginRecording(nodeW, nodeH)
     lensRec.translate(margin - x, margin - y)

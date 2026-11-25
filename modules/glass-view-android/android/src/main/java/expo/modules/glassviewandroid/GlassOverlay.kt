@@ -62,7 +62,8 @@ internal class GlassOverlay private constructor(
   override fun onPreDraw(): Boolean {
     for (index in 0 until root.childCount) {
       val child = root.getChildAt(index)
-      if (child !== this && child.isDirty) {
+      if (child === this) break
+      if (child.isDirty) {
         invalidate()
         break
       }
@@ -86,7 +87,9 @@ internal class GlassOverlay private constructor(
       root.background?.draw(recording)
       for (index in 0 until root.childCount) {
         val child = root.getChildAt(index)
-        if (child !== this && child.visibility == VISIBLE && child.id != android.R.id.statusBarBackground &&
+        // Only what sits below this overlay: drawing siblings above it can recurse back into onDraw.
+        if (child === this) break
+        if (child.visibility == VISIBLE && child.id != android.R.id.statusBarBackground &&
           child.id != android.R.id.navigationBarBackground
         ) child.draw(recording)
       }
@@ -98,12 +101,14 @@ internal class GlassOverlay private constructor(
     getLocationInWindow(own)
     for (view in views) {
       if (!view.isShown || view.width == 0 || view.height == 0) continue
+      val opacity = view.effectiveAlpha()
+      if (opacity <= .002f) continue
       view.getLocationInWindow(location)
       val x = (location[0] - own[0]).toFloat()
       val y = (location[1] - own[1]).toFloat()
       val save = canvas.save()
       canvas.translate(x, y)
-      view.render(canvas, node, x, y)
+      view.render(canvas, node, x, y, opacity)
       canvas.restoreToCount(save)
     }
   }

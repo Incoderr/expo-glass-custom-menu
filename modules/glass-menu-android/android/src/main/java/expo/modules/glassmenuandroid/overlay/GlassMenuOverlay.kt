@@ -96,7 +96,8 @@ internal class GlassMenuOverlay private constructor(
   private fun backdropChanged(): Boolean {
     for (index in 0 until root.childCount) {
       val child = root.getChildAt(index)
-      if (child !== this && child.isDirty) return true
+      if (child === this) break
+      if (child.isDirty) return true
     }
     return false
   }
@@ -135,7 +136,9 @@ internal class GlassMenuOverlay private constructor(
     root.background?.draw(recording)
     for (index in 0 until root.childCount) {
       val child = root.getChildAt(index)
-      if (child !== this && child.visibility == VISIBLE && child.id != android.R.id.statusBarBackground &&
+      // Only what sits below this overlay: drawing siblings above it can recurse back into onDraw.
+      if (child === this) break
+      if (child.visibility == VISIBLE && child.id != android.R.id.statusBarBackground &&
         child.id != android.R.id.navigationBarBackground
       ) child.draw(recording)
     }
@@ -195,6 +198,7 @@ internal class GlassMenuOverlay private constructor(
   }
 
   fun open(anchor: GlassMenuAndroidView, through: RectF?) {
+    if (root.indexOfChild(this) != root.childCount - 1) bringToFront()
     if (session?.anchor !== anchor) finishSession(notify = true)
     val current = session
     if (current != null) {
