@@ -1,6 +1,6 @@
 import { GlassTabBar, type IGlassTab } from "@/components/glass-tab-bar";
 import { Image } from "expo-image";
-import { Link } from "expo-router";
+import { Link, useIsFocused } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState, type FC } from "react";
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
@@ -19,6 +19,7 @@ const Index: FC = () => {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [tab, setTab] = useState(0);
+  const focused = useIsFocused();
   const card = (width - 16 * 2 - 12) / 2;
 
   return (
@@ -49,12 +50,18 @@ const Index: FC = () => {
             </View>
           </View>
         ))}
+        <Link href="/media" style={styles.link}>
+          Видео со стеклянным плеером →
+        </Link>
         <Link href="/showcase" style={styles.link}>
           Демо меню от автора →
         </Link>
       </ScrollView>
 
-      <GlassTabBar tabs={TABS} index={tab} onChange={setTab} bottomInset={insets.bottom} />
+      {/* Glass draws above the whole window, so it must not outlive this screen during navigation. */}
+      {focused ? (
+        <GlassTabBar tabs={TABS} index={tab} onChange={setTab} bottomInset={insets.bottom} />
+      ) : null}
     </View>
   );
 };
